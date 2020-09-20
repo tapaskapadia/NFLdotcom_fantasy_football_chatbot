@@ -209,5 +209,5 @@ if __name__ == '__main__':
     sched.add_job(runner, 'cron',['scoreCheck'], day_of_week='sun', hour='16,20', timezone='America/New_York', replace_existing=True)
     sched.add_job(runner, 'cron', ['loserOfTheWeek'], day_of_week='tue', hour=9, timezone='America/New_York', replace_existing=True)
     sched.add_job(runner, 'cron', ['getMatchups'], day_of_week='thu', hour=18,minute=30, timezone='America/New_York', replace_existing=True)
-    sched.add_job(runner, 'cron', ['powerRankings'], day_of_week='tu', hour=18,minute=30, timezone='America/New_York', replace_existing=True)
+    sched.add_job(runner, 'cron', ['powerRankings'], day_of_week='tue', hour=18,minute=30, timezone='America/New_York', replace_existing=True)
     sched.start()
