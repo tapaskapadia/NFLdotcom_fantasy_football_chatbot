@@ -2,3 +2,4 @@ localtesting
 .env
 env
 .vscode
+nohup.out

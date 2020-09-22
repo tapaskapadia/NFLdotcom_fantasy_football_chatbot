@@ -7,6 +7,7 @@ import random
 import json
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 http = urllib3.PoolManager()
 
@@ -147,7 +148,7 @@ def loserOfTheWeek(league_url):
             scores = re.findall('[0-9\.]+ | [0-9\.]+', text)
             ret = [(teams[0].strip(),scores[0].strip()),(teams[1].strip(),scores[1].strip())]
             loserPointArray.extend(ret)
-        loser = min(loserPointArray, key = lambda t: t[1])
+        loser = min(loserPointArray, key = lambda t: float(t[1]))
         phrase = random_loser_phrase()
         replaced_phrase = phrase.replace("REPLACE_TEAM",managers[loser[0]]).replace("REPLACE_POINTS",loser[1])
         outText = '[Loser of Week #{} Report] \n\n {}'.format(week,replaced_phrase)
@@ -199,7 +200,7 @@ def powerRankings(league_url,week_num=None):
     return outputPowerRank
 
 def healthCheck():
-    print("UP")
+    print(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
 if __name__ == '__main__':
     load_dotenv()
@@ -209,5 +210,5 @@ if __name__ == '__main__':
     sched.add_job(runner, 'cron',['scoreCheck'], day_of_week='sun', hour='16,20', timezone='America/New_York', replace_existing=True)
     sched.add_job(runner, 'cron', ['loserOfTheWeek'], day_of_week='tue', hour=9, timezone='America/New_York', replace_existing=True)
     sched.add_job(runner, 'cron', ['getMatchups'], day_of_week='thu', hour=18,minute=30, timezone='America/New_York', replace_existing=True)
-    sched.add_job(runner, 'cron', ['powerRankings'], day_of_week='tue', hour=18,minute=30, timezone='America/New_York', replace_existing=True)
+    sched.add_job(runner, 'cron', ['powerRankings'], day_of_week='tue', hour=12,minute=30, timezone='America/New_York', replace_existing=True)
     sched.start()
