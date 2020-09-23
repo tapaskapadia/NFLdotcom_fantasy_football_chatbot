@@ -56,6 +56,8 @@ def runner(action):
             out = loserOfTheWeek(league_url)
         elif action == "powerRankings":
             out = powerRankings(league_url)
+        elif action == "finalScores":
+            out = finalScores(league_url)
         if out:
             bot.send_message(out)
     except:
@@ -177,6 +179,27 @@ def loserOfTheWeek(league_url):
     else: 
         return "Error finding this weeks loser"
 
+def finalScores(league_url):
+    week = int(getWeek(league_url).split(' ')[1]) - 1
+    if (week > 0):
+        #url = "https://fantasy.nfl.com/league/986877/team/6/gamecenter?week={}".format(week)
+        url = "{}/team/2/gamecenter?week={}".format(league_url,week)
+        response = http.request('GET', url, headers={'Content-Type':'text/html'})
+        soup = BeautifulSoup(response.data, "html.parser")
+        week = int(soup.find('li', attrs={'class':'wl'}).getText().split(" ")[1])
+        scoresElements = soup.find('div', attrs={'class':'teamNav'}).find_all("a")
+        finalScoreArray = []
+        for score in scoresElements:
+            text = score.getText()
+            matchup = re.split("(?<=[0-9]) | (?=[0-9])",score.getText())
+            if len(matchup) == 4:
+                matchupText = "{} {} vs. {} {}".format(matchup[0], matchup[1],matchup[2], matchup[3])
+                finalScoreArray.append(matchupText)
+        outText = '[Week #{} - Final Scores] \n\n{}'.format(week,"\n\n".join(finalScoreArray))
+        return outText
+    else: 
+        return "Error finding this weeks score"
+
 def getTeamPointsAllWeek(league_url,week_num=None):
     currweek = week_num or int(getWeek(league_url).split(' ')[1])
     teamPointMap = {}
@@ -234,4 +257,5 @@ if __name__ == '__main__':
     sched.add_job(runner, 'cron', ['loserOfTheWeek'], day_of_week='tue', hour=9, timezone='America/New_York', replace_existing=True)
     sched.add_job(runner, 'cron', ['getMatchups'], day_of_week='thu', hour=18,minute=30, timezone='America/New_York', replace_existing=True)
     sched.add_job(runner, 'cron', ['powerRankings'], day_of_week='tue', hour=12,minute=30, timezone='America/New_York', replace_existing=True)
+    sched.add_job(runner, 'cron', ['finalScores'], day_of_week='tue', hour=9, minute=30,timezone='America/New_York', replace_existing=True)
     sched.start()
