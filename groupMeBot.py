@@ -80,6 +80,20 @@ def getManagers(league_url):
         if (len(team) > 2 ):
             teamManagersMap[team[0]] = team[1].strip()
     return teamManagersMap
+
+#not efficient 
+def getProjections(league_url):
+    managers = getManagers(league_url)
+    teamProjectedMap ={}
+    for team in range(1, len(managers)+1):
+        url = "{}/team/{}/gamecenter?gameCenterTab=preview&previewType=sbs".format(league_url,team)
+        response = http.request('GET', url, headers={'Content-Type':'text/html'})
+        soup = BeautifulSoup(response.data, "html.parser")
+        projected = soup.find('span', attrs={'class':'teamTotalProjected'}).getText()
+        teamName = soup.find('a', attrs={'class':'teamName'}).getText()
+        teamProjectedMap[teamName.strip()]=float(projected)
+    return teamProjectedMap
+
 def getMatchups(league_url):
     #url = "https://fantasy.nfl.com/league/986877/team/6/gamecenter"
     url = league_url+"/team/2/gamecenter"
@@ -87,13 +101,14 @@ def getMatchups(league_url):
     soup = BeautifulSoup(response.data, "html.parser")
     week = soup.find('li', attrs={'class':'wl'}).getText()
     titles = soup.find('div', attrs={'class':'teamNav'}).find_all("a")
-    managers = getManagers(league_url)
+    #not efficient 
+    teamProjections = getProjections(league_url)
     matchups = []
     for title in titles:
         matchupsRaw = title["title"]
         teams = [t.strip() for t in matchupsRaw.split('vs.')]
-        if managers and len(teams) > 1:
-            matchupText = teams[0] + " (" + managers[teams[0]] + ") vs. " + teams[1] + " (" + managers[teams[1]] + ")"
+        if teamProjections and len(teams) > 1:
+            matchupText = "{} (proj. {}) vs. {} (proj. {})".format(teams[0],teamProjections[teams[0]],teams[1],teamProjections[teams[1]])#teams[0] + " (" + teamProjections[teams[0]] + ") vs. " + teams[1] + " (" + teamProjections[teams[1]] + ")"
             matchups.append(matchupText)
     if not matchups:
         return('')
@@ -108,15 +123,21 @@ def getWeek(league_url):
     soup = BeautifulSoup(response.data, "html.parser")
     week = soup.find('li', attrs={'class':'wl'}).getText()
     return week
+
 def scoreCheck(league_url):
     #url = "https://fantasy.nfl.com/league/986877/team/6/gamecenter"
     url = league_url + "/team/2/gamecenter"
     response = http.request('GET', url, headers={'Content-Type':'text/html'})
     soup = BeautifulSoup(response.data, "html.parser")
+    #not efficient 
+    teamProjections = getProjections(league_url)
     scoresElements = soup.find('div', attrs={'class':'teamNav'}).find_all("a")
     scoreText = []
     for score in scoresElements:
-        scoreText.append(score.getText())
+        matchup = re.split("(?<=[0-9]) | (?=[0-9])",score.getText())
+        if len(matchup) == 4:
+            matchupText = "{} {} (proj. {}) vs. {} {} (proj. {})".format(matchup[0], matchup[1], teamProjections[matchup[0]],matchup[2], matchup[3], teamProjections[matchup[2]])
+            scoreText.append(matchupText)
     outScores = ['[Score Check]'] + scoreText
     return '\n\n'.join(outScores)
 
@@ -192,11 +213,13 @@ def powerRankings(league_url,week_num=None):
             teamName = teamData[1]
             avg_score  = sum(allWeeksTeam[teamData[1]])/len(allWeeksTeam[teamData[1]])
             high_low = (max(allWeeksTeam[teamData[1]])+min(allWeeksTeam[teamData[1]]))*2
-            winning = float(teamData[3]) * 200
+            winning = float(teamData[3]) * 200 * 2
             powerRankScore = (avg_score + high_low + winning)/10
-            powerRankArry.append((teamData[1],powerRankScore))   
+            powerRankArry.append((teamData[1],round(powerRankScore, 2)))   
     powerRankArry.sort(key = lambda x: x[1], reverse=True) 
-    outputPowerRank = '[Weekly Power Rankings Report] \n\n' + "\n".join(map(str, powerRankArry))
+    outputPowerRank = '[Weekly Power Rankings Report] \n\n'
+    for index, pr in enumerate(powerRankArry):
+        outputPowerRank += "{}. {}\n".format((index + 1),pr)
     return outputPowerRank
 
 def healthCheck():
