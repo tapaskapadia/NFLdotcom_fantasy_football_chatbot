@@ -84,6 +84,7 @@ def getManagers(league_url):
     return teamManagersMap
 
 #not efficient 
+#does not update dynamically
 def getProjections(league_url):
     managers = getManagers(league_url)
     teamProjectedMap ={}
@@ -95,6 +96,19 @@ def getProjections(league_url):
         teamName = soup.find('a', attrs={'class':'teamName'}).getText()
         teamProjectedMap[teamName.strip()]=float(projected)
     return teamProjectedMap
+
+#playing time remaining each team
+def getTimeRemaining(league_url):
+    managers = getManagers(league_url)
+    teamTimeRemainingMap ={}
+    for team in range(1, len(managers)+1):
+        url = "{}/team/{}/gamecenter?gameCenterTab=preview&previewType=sbs".format(league_url,team)
+        response = http.request('GET', url, headers={'Content-Type':'text/html'})
+        soup = BeautifulSoup(response.data, "html.parser")
+        timeRemaining = soup.find('span', attrs={'class':'minType-remaining'}).getText()
+        teamName = soup.find('a', attrs={'class':'teamName'}).getText()
+        teamTimeRemainingMap[teamName.strip()]= timeRemaining
+    return teamTimeRemainingMap
 
 def getMatchups(league_url):
     #url = "https://fantasy.nfl.com/league/986877/team/6/gamecenter"
@@ -132,13 +146,13 @@ def scoreCheck(league_url):
     response = http.request('GET', url, headers={'Content-Type':'text/html'})
     soup = BeautifulSoup(response.data, "html.parser")
     #not efficient 
-    teamProjections = getProjections(league_url)
+    teamTimeRemaining = getTimeRemaining(league_url)
     scoresElements = soup.find('div', attrs={'class':'teamNav'}).find_all("a")
     scoreText = []
     for score in scoresElements:
         matchup = re.split("(?<=[0-9]) | (?=[0-9])",score.getText())
         if len(matchup) == 4:
-            matchupText = "{} {} (proj. {}) vs. {} {} (proj. {})".format(matchup[0], matchup[1], teamProjections[matchup[0]],matchup[2], matchup[3], teamProjections[matchup[2]])
+            matchupText = "{} {} (min. remaining {}) vs. {} {} (min. remaining {})".format(matchup[0], matchup[1], teamTimeRemaining[matchup[0]],matchup[2], matchup[3], teamTimeRemaining[matchup[2]])
             scoreText.append(matchupText)
     outScores = ['[Score Check]'] + scoreText
     return '\n\n'.join(outScores)
